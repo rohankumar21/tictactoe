@@ -50,6 +50,8 @@ def game() :
     #User input for the desired symbol of the player
     player2 = input("Player 2, enter your desired symbol. Press Enter for default\n")
     #Default symbol for Player 2
+    if player2 == player1:
+        player2 = input("Invalid symbol entered, please enter a different symbol. Press Enter for default\n")
     if player2 == "":
         player2 = "O"
         print("Player 2: O")
