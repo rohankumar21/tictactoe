@@ -1,28 +1,43 @@
+import datetime
 #Defining the player class for each player in the game
 class player:
     #Initializer for each player object with corresponding name, symbol, array of moves, and number of wins
-    def __init__(self, name, symbol, moves):
+    def __init__(self, name=None, symbol=None):
+        self.moves = []
+        self.numWins = 0
         self.name = name
         self.symbol = symbol
-        self.moves = moves
-        self.numWins = 0
-
-    #Function that prints the information of each player
-    def printInfo(self):
-        print("Name: " + self.name)
-        print("Symbol: " + self.symbol)
-        print("Wins: %s" % self.numWins + "\n")
 
 #Defining the game class that operates the tictactoe game
 class game:
     #Initializes the game board as a dictionary with 9 entries that are empty by default
     def __init__(self):
-        self.board = {'1': ' ', '2': ' ', '3': ' ',
-                 '4': ' ', '5': ' ', '6': ' ',
-                 '7': ' ', '8': ' ', '9': ' '}
+        #Instance variable that tracks the time of the last update made to the game
+        self.lastUpdate = 0
+        #Instance variable for the authorization token for the current game
+        self.authToken = 0
+        #Player 1 and player 2 objects for the game
+        #Default player objects upon instantiation
+        self.player1 = player()
+        self.player2 = player()
+        #Instance variable that tracks which players turn it is
+        self.playersTurn = player()
+        #Instance variable to track how many successful moves have been made
+        self.numSuccessfulTurns = 0
+        #Map for the board that maps the position to the symbol present
+        self.board = {1: ' ', 2: ' ', 3: ' ',
+                 4: ' ', 5: ' ', 6: ' ',
+                 7: ' ', 8: ' ', 9: ' '}
         self.board_keys = []
         for key in self.board:
             self.board_keys.append(key)
+
+    #Function that returns the player object based on the name provided
+    def findPlayer(self, playerName):
+        if self.player1.name == playerName:
+            return self.player1
+        else:
+            return self.player2
 
     #Function that resets the game
     def resetGame(self, player1, player2):
@@ -33,13 +48,17 @@ class game:
         player1.moves.clear()
         player2.moves.clear()
 
+    #Function that returns the current state of the game as a list with the symbols entered
+    def getGameState(self):
+        return list(self.board.values())
+
     #Function that displays the board
     def printBoard(self):
-        print(self.board['1'] + "|" + self.board['2'] + "|" + self.board['3'])
+        print(self.board[1] + "|" + self.board[2] + "|" + self.board[3])
         print("-+-+-")
-        print(self.board['4'] + "|" + self.board['5'] + "|" + self.board['6'])
+        print(self.board[4] + "|" + self.board[5] + "|" + self.board[6])
         print("-+-+-")
-        print(self.board['7'] + "|" + self.board['8'] + "|" + self.board['9'])
+        print(self.board[7] + "|" + self.board[8] + "|" + self.board[9])
         print("\n")
 
     #Function that prints the default board for users to understand the layout of the board
@@ -56,30 +75,50 @@ class game:
     def printFinalBoard(self):
         print("Final Board: ")
         self.printBoard()
-        print("\n")
 
     #Function that handles the turns for each player
     #Returns true for a successful turn, returns false otherwise
-    def turn(self, player):
+    def turn(self, player, move):
         #Defines a variable as the players input of a desired space on the board
-        move = input(player.name + "'s turn, choose a spot to place your symbol\n")
+        #move = input(player.name + "'s turn, choose a spot to place your symbol\n")
         #Conditional that ensures the player is entering a number between 1 and 9
-        if move.isdigit() == False or int(move) > 9 or int(move) < 0:
-            print("Invalid selection, please choose a correct space")
-            return False
-        #Conditional that checks if the desired spot is empty
-        elif self.board[move] == ' ':
+        if move > 9 or move < 1:
+            raise ValueError('Invalid selection')
+            #return False
+        #Conditional that checks if the game has not concluded
+        #if thedesired spot is empty and if it is the desired players turn
+        elif not(self.checkWin(player)) and self.board[move] == ' ' and self.playersTurn.name == player.name and self.numSuccessfulTurns < 9:
             #Places the players symbol in the specified spot on the board
             self.board[move] = player.symbol
             #Appends the spot to the players moves array
-            player.moves.append(int(move))
+            player.moves.append(move)
+            #Increments the numSuccessfulTurns variable after a successful turn
+            self.numSuccessfulTurns += 1
+            #Conditional to check if the game has been won after the move has been successfully placed
+            if self.checkWin(player):
+                print(player.name + " Wins!")
+                return self.printBoard()
+            #Conditional to check if the game has concluded without a winner
+            #This occurs when the board has been filled without a winner (9 total moves)
+            if self.numSuccessfulTurns == 9:
+                print("It's a tie! The match has concluded")
+                return self.printBoard()
             #Prints the board to show where the user entered their symbol
             self.printBoard()
-            return True
-        #Conditional that handles the case of the spot being filled
-        else:
-            print("That spot is already filled. Choose a spot to place your symbol\n")
-            return False
+            #Upon successfully placing the turn, update the time that the game was last updated
+            self.lastUpdate = datetime.datetime.now()
+            #After successful move, change whose turn it is in the game
+            if self.playersTurn == self.player1:
+                self.playersTurn = self.player2
+            else:
+                self.playersTurn = self.player1
+            return ""
+        #If the player attempting to post a turn is out of turn, throw a value error
+        elif not (self.playersTurn == player):
+            raise ValueError("It is not your turn, please wait to post a move until it is your turn")
+        #Conditional that handles the case of the desired spot being filled
+        elif not(self.board[move] == ' '):
+            raise ValueError('That spot is already filled. Choose a spot to place your symbol')
 
     #Function that checks if a specified player has won the game
     #Returns true if a winnning pair of 3 has been located in the players moves array and false otherwise
@@ -113,76 +152,3 @@ class game:
             return True
         else:
             return False
-
-    #Function that handles the order that the game is played in
-    def playGame(self, Player1, Player2):
-        #Prints each players information accordingly
-        print("\nPlayer 1:")
-        Player1.printInfo()
-        print("Player 2:")
-        Player2.printInfo()
-        self.printBlankBoard()
-        #Count variable that keeps track of how many turns have been played
-        count = 0
-        #While loop that only occurs 9 times (one turn for each square)
-        while count < 9:
-            #Conditional that checks if either player has won after 5 turns
-            if count >= 5 and self.checkWin(Player1) or self.checkWin(Player2):
-                break
-            #Player 1's turn when count is an even number
-            #Conditional that checks if a successful turn has been made by player 1
-            if count % 2 == 0 and self.turn(Player1):
-                #Incrementing count once the turn has been successfully made
-                count += 1
-            #Conditional that checks if a successful turn has been made by player 1
-            elif count % 2 != 0 and self.turn(Player2):
-                #Incrementing count once the turn has been successfully made
-                count += 1
-            #If an unsuccessful move has been made by either player, the while loop
-            #will continue and prompt the user for another turn
-            else:
-                continue
-        #Conditional that checks if 9 moves have been made without either player winning
-        if count == 9 and not self.checkWin(Player1) and not self.checkWin(Player2):
-            print("Game Over! It's a tie!\n")
-        #Conditional that runs if a player has won
-        else:
-            print("Winner!\n")
-            #Invokes the printFinalBoard function to print the final board
-            self.printFinalBoard()
-        #Input request if the player wants to play another game
-        restart = input("Do you want to play again? (Y/N)\n")
-        #If the player has indicated that they would like to play again, the
-        #resetGame function is invoked and the playGame function starts another game
-        if restart == "y" or restart == "Y":
-            self.resetGame(Player1, Player2)
-            self.playGame(Player1, Player2)
-
-#Defining the class that will run the tictactoe game
-class main:
-    #Input prompts for each player 1's desired name and symbol
-    playerName = input("Player 1, please enter your name:\n")
-    playerSymbol = input("Player 1, enter your desired symbol. Press Enter for default:")
-    #Default symbol for Player 1
-    if playerSymbol == "":
-        print("Default\n")
-        playerSymbol = "X"
-    #Empty array for Player 1's moves array
-    playerMoves = []
-    #Creates a player object for player 1 with their desired name, symbol, and an empty moves array
-    Player1 = player(playerName, playerSymbol, playerMoves)
-    #Input prompts for each player 2's desired name and symbol
-    playerName = input("Player 2, please enter your name:\n")
-    playerSymbol = input("Player 2, enter your desired symbol. Press Enter for default:")
-    #Default symbol for Player 1
-    if playerSymbol == "":
-        print("Default\n")
-        playerSymbol = "O"
-    #Empty array for Player 2's moves array
-    playerMoves = []
-    #Creates a player object for player 2 with their desired name, symbol, and an empty moves array
-    Player2 = player(playerName, playerSymbol, playerMoves)
-    #Creates a game object for player 1 and player 2 to play on
-    currGame = game()
-    #Invokes the playGame function on the game object for player 1 and player 2
-    currGame.playGame(Player1, Player2)
